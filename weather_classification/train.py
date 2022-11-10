@@ -24,8 +24,8 @@ logging_levels = {
 transform = transforms.Compose([
     # transforms.RandomCrop(224,224),
     transforms.Resize((224,224)),
-    # transforms.RandomAffine(90),
-    # transforms.RandomRotation(90),
+    transforms.RandomAffine(90),
+    transforms.RandomRotation(90),
     transforms.ToTensor(),
 ])
 
@@ -54,7 +54,7 @@ class WeatherClass:
         # TODO pass these in as params
         loss_fn = nn.CrossEntropyLoss()
         optimizer = Adam(self.model.parameters(), lr=lr)
-        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.8)
         # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 0.1**(epoch+1))
 
         for ep in range(eps):
@@ -151,9 +151,9 @@ if __name__ == "__main__":
     Weather = WeatherClass(model, train_dataloader, test_dataloader, args.comment)
 
     # train
-    epochs = 20
+    epochs = 40
     learning_rate = 0.001
     Weather.train(epochs, learning_rate)
 
-    path = os.path.join('results', 'model_nofeatures_ep20lr001.pth')
+    path = os.path.join('results', 'model_nofeatures_ep40lr001gp8.pth')
     Weather.save_model(path)

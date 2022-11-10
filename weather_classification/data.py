@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import torch
 from torch.utils.data import Dataset, DataLoader
+import matplotlib.pyplot as plt
 
 
 class WeatherDataset(Dataset):
@@ -25,11 +26,17 @@ class WeatherDataset(Dataset):
         label_path = os.path.join(self.labels_dir, t_str)
 
         img = Image.open(data_path)
+        plt.imshow(np.array(img))
+        plt.savefig('img.jpg')
+
         if self.transform:
             img = self.transform(img)
         with open(label_path, 'rb') as file:
             label = int(file.read())
             label = torch.tensor(label)
+
+        plt.imshow(torch.movedim(img,0,2).numpy())
+        plt.savefig('img2.jpg')
         
         return img, label
 

@@ -1,4 +1,5 @@
 import os
+import json
 
 import numpy as np
 from PIL import Image
@@ -26,17 +27,41 @@ class WeatherDataset(Dataset):
         label_path = os.path.join(self.labels_dir, t_str)
 
         img = Image.open(data_path)
-        # plt.imshow(np.array(img))
-        # plt.savefig('img.jpg')
-
+    
         if self.transform:
             img = self.transform(img)
         with open(label_path, 'rb') as file:
             label = int(file.read())
             label = torch.tensor(label)
-
-        # plt.imshow(torch.movedim(img,0,2).numpy())
-        # plt.savefig('img2.jpg')
         
         return img, label
+
+
+class WeatherDataset2(Dataset):
+
+    def __init__(self, data_dir, data_json, transform=None):
+        self.data_dir = data_dir
+        with open(data_json) as file:
+            self.metadata = json.load(file)
+        
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.metadata) 
+
+    def __getitem__(self, idx):
+
+        filename = self.metadata[str(idx)]['path'].split('/')[1]
+        img_path = os.path.join(self.data_dir, filename)
+
+        img = Image.open(img_path)
+        label = int(self.metadata[str(idx)]['label'])
+        label = torch.tensor(label)
+
+        source = self.metadata[str(idx)]['source']
+        
+        if self.transform:
+            img = self.transform(img)
+
+        return img, label, source
 

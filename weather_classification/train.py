@@ -9,7 +9,7 @@ from torch.optim import lr_scheduler, Adam
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
-from data import WeatherDataset, WeatherDataset2
+from data import WeatherDataset0, WeatherDataset
 from model import resnet50
 
 
@@ -24,8 +24,8 @@ logging_levels = {
 transform = transforms.Compose([
     # transforms.RandomCrop(224,224),
     transforms.Resize((224,224)),
-    transforms.RandomAffine(90),
-    transforms.RandomRotation(90),
+    # transforms.RandomAffine(90),
+    # transforms.RandomRotation(90),
     transforms.ToTensor(),
 ])
 
@@ -147,10 +147,10 @@ if __name__ == "__main__":
     # define base model
     model = get_resnet50()
 
-    # train_data = WeatherDataset(args.train_data, args.train_labels, transform=transform)
-    # test_data = WeatherDataset(args.test_data, args.test_labels, transform=transform)
-    train_data = WeatherDataset2(args.data_dir, args.train, transform=transform)
-    test_data = WeatherDataset2(args.data_dir, args.test, transform=transform)
+    # train_data = WeatherDataset0(args.train_data, args.train_labels, transform=transform)
+    # test_data = WeatherDataset0(args.test_data, args.test_labels, transform=transform)
+    train_data = WeatherDataset(args.data_dir, args.train, transform=transform)
+    test_data = WeatherDataset(args.data_dir, args.test, transform=transform)
     
     train_dataloader = DataLoader(
         train_data, 

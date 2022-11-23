@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
 
-class WeatherDataset(Dataset):
+class WeatherDataset0(Dataset):
 
     def __init__(self, data_path, target_path, transform=None):
         self.data_dir = data_path
@@ -37,7 +37,7 @@ class WeatherDataset(Dataset):
         return img, label
 
 
-class WeatherDataset2(Dataset):
+class WeatherDataset(Dataset):
 
     def __init__(self, data_dir, data_json, transform=None):
         self.data_dir = data_dir

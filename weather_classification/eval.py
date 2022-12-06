@@ -1,3 +1,7 @@
+"""
+ignore. this was to test transferability of DAWN-trained model to MWI
+"""
+
 import argparse
 import torch 
 from torch.utils.data import DataLoader

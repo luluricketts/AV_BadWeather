@@ -10,7 +10,8 @@ from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
 from data import WeatherDataset0, WeatherDataset
-from model import resnet50
+from model import get_resnet50, ResNet
+from model_utils import class_sampler
 
 
 logging_levels = {
@@ -140,12 +141,13 @@ parser.add_argument('--test', type=str, default='../../data/weather_classificati
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--logging', type=int, default=2)
 parser.add_argument('--exp_name', type=str, required=True)
+parser.add_argument('--params', type=str, default=None)
 if __name__ == "__main__":
     args = parser.parse_args()
     logging.basicConfig(level=logging_levels[args.logging])
 
     # define base model
-    model = get_resnet50()
+    model = ResNet(params=args.params)
 
     # train_data = WeatherDataset0(args.train_data, args.train_labels, transform=transform)
     # test_data = WeatherDataset0(args.test_data, args.test_labels, transform=transform)
@@ -155,7 +157,8 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(
         train_data, 
         batch_size=args.batch_size, 
-        shuffle=True, 
+        # shuffle=True, 
+        sampler=class_sampler(args.train),
         collate_fn=collate_fn,
         num_workers=8
     )
@@ -170,7 +173,7 @@ if __name__ == "__main__":
     Weather = WeatherClass(model, train_dataloader, test_dataloader, args.exp_name)
 
     # train
-    epochs = 40
+    epochs = 20
     learning_rate = 0.001
     Weather.train(epochs, learning_rate)
 

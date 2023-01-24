@@ -1,0 +1,20 @@
+UID_test: 10990
+UID_train: 64569
+class_counts:
+  0: 45903
+  1: 6906
+  2: 7391
+  3: 4369
+dataset_path: /home/lulu/datasets
+datasets:
+  BDD: add_bdd100k
+  Dawn: add_Dawn
+  MWI: add_MWI
+labels:
+  0: clear
+  1: rainy
+  2: snowy
+  3: foggy
+metadata_test: ./test.json
+metadata_train: ./train.json
+train_ratio: 0.8

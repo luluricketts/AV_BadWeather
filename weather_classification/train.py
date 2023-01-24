@@ -9,9 +9,8 @@ from torch.optim import lr_scheduler, Adam
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
-from data import WeatherDataset0, WeatherDataset
+from data.data import WeatherDataset, class_sampler
 from model import get_resnet50, ResNet
-from model_utils import class_sampler
 
 
 logging_levels = {
@@ -24,29 +23,15 @@ logging_levels = {
 
 transform = transforms.Compose([
     # transforms.RandomCrop(224,224),
-    transforms.Resize((224,224)),
     # transforms.RandomAffine(90),
     # transforms.RandomRotation(90),
-    transforms.ToTensor(),
+    transforms.PILToTensor(),
 ])
 
 
 def collate_fn(batch):
     batch = list(filter(lambda x: x[0].shape[0] == 3, batch))
     return default_collate(batch)
-
-
-def collate_dawn_only(batch):
-    batch = list(filter(lambda x: x[2] == 'Dawn' and x[0].shape[0] == 3 and x[1] != 3, batch))
-    
-    print('BATCH', batch)
-    return default_collate(batch)
-    
-def collate_mwi_only(batch):
-    batch = list(filter(lambda x: x[2] == 'MWI' and x[0].shape[0] == 3, batch))
-    return default_collate(batch)
-    
-
 
 
 class WeatherClass:
@@ -76,10 +61,10 @@ class WeatherClass:
 
             train_loss = 0
             train_acc = 0
-            for i,(X,y,_) in enumerate(self.train_dataloader):
+            for i,(X,y) in enumerate(self.train_dataloader):
                 logging.info(f'Processing batch {i}/{len(self.train_dataloader)}')
                 optimizer.zero_grad()
-                X = X.to(self.device)
+                X = X.to(self.device).float()
                 y = y.to(self.device)
 
                 pred = self.model(X)
@@ -109,7 +94,7 @@ class WeatherClass:
 
         test_loss = 0
         test_acc = 0
-        for X,y,_ in self.test_dataloader: 
+        for X,y in self.test_dataloader: 
             X = X.to(self.device)
             y = y.to(self.device)
 
@@ -131,34 +116,27 @@ class WeatherClass:
 
         
 parser = argparse.ArgumentParser()
-# parser.add_argument('--train_data', type=str, default='../../data/MWI/train_data')
-# parser.add_argument('--train_labels', type=str, default='../../data/MWI/train_labels')
-# parser.add_argument('--test_data', type=str, default='../../data/MWI/test_data')
-# parser.add_argument('--test_labels', type=str, default='../../data/MWI/test_labels')
-parser.add_argument('--data_dir', type=str, default='../../data/weather_classification/data')
-parser.add_argument('--train', type=str, default='../../data/weather_classification/train.json')
-parser.add_argument('--test', type=str, default='../../data/weather_classification/test.json')
+parser.add_argument('--train', type=str, default='data/train.json')
+parser.add_argument('--test', type=str, default='data/test.json')
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--logging', type=int, default=2)
 parser.add_argument('--exp_name', type=str, required=True)
+parser.add_argument('--config', type=str, default='data/config.yaml')
 parser.add_argument('--params', type=str, default=None)
 if __name__ == "__main__":
     args = parser.parse_args()
     logging.basicConfig(level=logging_levels[args.logging])
 
     # define base model
-    model = ResNet(params=args.params)
+    # model = ResNet(params=args.params)
+    model = get_resnet50()
 
-    # train_data = WeatherDataset0(args.train_data, args.train_labels, transform=transform)
-    # test_data = WeatherDataset0(args.test_data, args.test_labels, transform=transform)
-    train_data = WeatherDataset(args.data_dir, args.train, transform=transform)
-    test_data = WeatherDataset(args.data_dir, args.test, transform=transform)
-    
+    train_data = WeatherDataset(args.train, transform=transform)
+    test_data = WeatherDataset(args.test, transform=transform)
     train_dataloader = DataLoader(
         train_data, 
         batch_size=args.batch_size, 
-        # shuffle=True, 
-        sampler=class_sampler(args.train),
+        sampler=class_sampler(args.config, args.train),
         collate_fn=collate_fn,
         num_workers=8
     )

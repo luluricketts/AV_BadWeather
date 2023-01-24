@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from feature import get_all_features
 
-def get_resnet50(params=None, features=False, n_classes=5):
+def get_resnet50(params=None, n_classes=4):
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model.fc = nn.Linear(2048, n_classes) # 4 for weatherdataset
 
@@ -17,7 +17,7 @@ def get_resnet50(params=None, features=False, n_classes=5):
 
 
 class ResNet(nn.Module):
-    def __init__(self, params=None, n_classes=5, feature_len=45):
+    def __init__(self, params=None, n_classes=4, feature_len=45):
         super(ResNet, self).__init__()
 
         self.resnet = resnet50(weights=ResNet50_Weights.DEFAULT)

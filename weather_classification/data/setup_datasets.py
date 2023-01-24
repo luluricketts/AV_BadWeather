@@ -1,0 +1,152 @@
+import os
+import json
+import yaml
+
+def reset_cfg(cfg):
+    cfg["UID_train"] = 0
+    cfg["UID_test"] = 0
+    for k in cfg["class_counts"]:
+        cfg["class_counts"][k] = 0    
+    return cfg
+
+
+def load_json(cfg):
+    train_path = cfg["metadata_train"]
+    test_path = cfg["metadata_test"]
+    if not os.path.isfile(train_path) or not os.path.isfile(test_path):
+        open(train_path, "w+")
+        open(test_path, "w+")
+        cfg = reset_cfg(cfg)
+    with open(train_path) as file: 
+        try:
+            train_json = json.load(file)
+        except json.JSONDecodeError:
+            train_json = {}
+    with open(test_path) as file:
+        try:
+            test_json = json.load(file)
+        except json.JSONDecodeError:
+            test_json = {}
+
+    return train_json, test_json, cfg
+
+
+def add_MWI(cfg_file):
+    train_json, test_json, cfg_file = load_json(cfg_file)
+
+    mwi_base = os.path.join(cfg_file["dataset_path"], "MWI-Dataset")
+    mwi_fog = os.path.join(mwi_base, "MWI-HAZE")
+    mwi_rain = os.path.join(mwi_base, "MWI-RAINY")
+    mwi_snow = os.path.join(mwi_base, "MWI-SNOWY")
+    mwi_clear = os.path.join(mwi_base, "MWI-SUNNY")
+
+    for i,cls_dir in enumerate([mwi_clear, mwi_rain, mwi_snow, mwi_fog]):
+        
+        train_idx = int(len(os.listdir(cls_dir)) * cfg_file["train_ratio"])
+        for file in sorted(os.listdir(cls_dir))[:train_idx]:
+            train_json[cfg_file["UID_train"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "MWI",
+                "label" : i,
+            }
+            cfg_file["UID_train"] += 1
+            cfg_file["class_counts"][i] += 1
+        for file in sorted(os.listdir(cls_dir))[train_idx:]:    
+            test_json[cfg_file["UID_test"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "MWI",
+                "label" : i,
+            }
+            cfg_file["UID_test"] += 1
+
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file
+
+
+def add_Dawn(cfg_file):
+    train_json, test_json, cfg_file = load_json(cfg_file)
+
+    dawn_base = os.path.join(cfg_file["dataset_path"], "Dawn")
+    dawn_fog = os.path.join(dawn_base, "Fog")
+    dawn_rain = os.path.join(dawn_base, "Rain")
+    dawn_snow = os.path.join(dawn_base, "Snow")
+
+    for i,cls_dir in enumerate([dawn_rain, dawn_snow, dawn_fog], start=1):
+
+        train_idx = int(len(os.listdir(cls_dir)) * cfg_file["train_ratio"])
+        for file in sorted(os.listdir(cls_dir))[:train_idx]:
+            if '.jpg' not in file:
+                continue
+            train_json[cfg_file["UID_train"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "Dawn",
+                "label" : i,
+            }
+            cfg_file["UID_train"] += 1
+            cfg_file["class_counts"][i] += 1
+        for file in sorted(os.listdir(cls_dir))[train_idx:]:
+            if '.jpg' not in file:
+                continue
+            test_json[cfg_file["UID_test"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "Dawn",
+                "label" : i,
+            }
+            cfg_file["UID_test"] += 1
+
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file
+
+
+def add_bdd100k(cfg_file):
+    train_json, test_json, cfg_file = load_json(cfg_file)
+
+    bdd_base = os.path.join(cfg_file["dataset_path"], "bdd100k")
+    bdd_train_img = os.path.join(bdd_base, "images", "100k", "train")
+    bdd_val_img = os.path.join(bdd_base, "images", "100k", "val")
+    with open(os.path.join(bdd_base, "labels", "bdd100k_labels_images_train.json"), "r") as file:
+        bdd_train = json.load(file)
+    with open(os.path.join(bdd_base, "labels", "bdd100k_labels_images_val.json"), "r") as file:
+        bdd_val = json.load(file)
+
+    for item in bdd_train:
+        if item["attributes"]["weather"] not in cfg_file["labels"].values():
+            continue
+        label = list(cfg_file["labels"].values()).index(item["attributes"]["weather"])
+        train_json[cfg_file["UID_train"]] = {
+            "img_path" : os.path.join(bdd_train_img, item["name"]),
+            "source" : "BDD100k",
+            "label" : label
+        }
+        cfg_file["UID_train"] += 1
+        cfg_file["class_counts"][label] += 1
+
+    for item in bdd_val:
+        if item["attributes"]["weather"] not in cfg_file["labels"].values():
+            continue
+        label = list(cfg_file["labels"].values()).index(item["attributes"]["weather"])
+        test_json[cfg_file["UID_test"]] = {
+            "img_path" : os.path.join(bdd_val_img, item["name"]),
+            "source" : "BDD100k",
+            "label" : label
+        }
+        cfg_file["UID_test"] += 1
+
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file
+    
+
+
+

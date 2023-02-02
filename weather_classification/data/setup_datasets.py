@@ -6,7 +6,9 @@ def reset_cfg(cfg):
     cfg["UID_train"] = 0
     cfg["UID_test"] = 0
     for k in cfg["class_counts"]:
-        cfg["class_counts"][k] = 0    
+        cfg["class_counts"][k] = 0
+    for k in cfg["test_class_counts"]:
+        cfg["test_class_counts"][k] = 0
     return cfg
 
 
@@ -58,6 +60,7 @@ def add_MWI(cfg_file):
                 "label" : i,
             }
             cfg_file["UID_test"] += 1
+            cfg_file["test_class_counts"][i] += 1
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)
@@ -97,6 +100,7 @@ def add_Dawn(cfg_file):
                 "label" : i,
             }
             cfg_file["UID_test"] += 1
+            cfg_file["test_class_counts"][i] += 1
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)
@@ -139,6 +143,7 @@ def add_bdd100k(cfg_file):
             "label" : label
         }
         cfg_file["UID_test"] += 1
+        cfg_file["test_class_counts"][label] += 1
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)

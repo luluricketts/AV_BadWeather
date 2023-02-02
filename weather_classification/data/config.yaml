@@ -5,6 +5,11 @@ class_counts:
   1: 6906
   2: 7391
   3: 4369
+test_class_counts:
+  0: 0
+  1: 0
+  2: 0
+  3: 0
 dataset_path: /home/lulu/datasets
 datasets:
   BDD: add_bdd100k
@@ -15,6 +20,14 @@ labels:
   1: rainy
   2: snowy
   3: foggy
-metadata_test: ./test.json
-metadata_train: ./train.json
+metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
+metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
 train_ratio: 0.8
+logging: 2
+model: get_resnet50
+params: 
+batch_size: 128
+epochs: 20
+lr: 0.005
+device_IDs: '2,3'
+notes: no features, no random rotations and affine 

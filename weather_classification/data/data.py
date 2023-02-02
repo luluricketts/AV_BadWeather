@@ -4,13 +4,23 @@ import numpy as np
 from yaml import safe_load as yload
 from PIL import Image
 import torch
-from torch.utils.data import Dataset, WeightedRandomSampler
+from torch.utils.data import Dataset, WeightedRandomSampler, default_collate
+from torchvision import transforms
 
-def class_sampler(cfg_file, json_file):
 
-    with open(cfg_file, "r") as file:
-        cfg = yload(file)
-        counts = np.array(list(cfg["class_counts"].values()))
+transform = transforms.Compose([
+    # transforms.RandomAffine(90),
+    # transforms.RandomRotation(90),
+    transforms.PILToTensor(),
+])
+eval_transform = transforms.Compose([
+    transforms.PILToTensor(),
+])
+
+
+def class_sampler(class_counts, json_file):
+
+    counts = np.array(list(class_counts.values()))
     with open(json_file, "r") as file:
         train_data = json.load(file)
 
@@ -20,6 +30,11 @@ def class_sampler(cfg_file, json_file):
     sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
     
     return sampler
+
+
+def collate_fn(batch):
+    batch = list(filter(lambda x: x[0].shape[0] == 3, batch))
+    return default_collate(batch)
 
 
 class WeatherDataset(Dataset):
@@ -45,5 +60,5 @@ class WeatherDataset(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, label
+        return img, label, self.metadata[idx]["source"]
 

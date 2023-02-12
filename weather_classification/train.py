@@ -88,7 +88,7 @@ class WeatherClass:
                 del X,y,loss,pred
                 torch.cuda.empty_cache()
             
-            val_acc /= len(dataloader.dataset)
+            val_acc /= len(self.val_dataloader.dataset)
             train_acc /= len(self.train_dataloader.dataset)
             logging.info(f'EPOCH {ep}: Loss {round(train_loss, 4)}\t Accuracy {train_acc}')
             self.writer.add_scalar('Loss/train', train_loss, ep)

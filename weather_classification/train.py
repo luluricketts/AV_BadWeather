@@ -44,7 +44,8 @@ class WeatherClass:
     def train(self, eps, lr, early_stop_epoch):
 
         optimizer = Adam(self.model.parameters(), lr=lr, weight_decay=0.01)
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.1)
+        scheduler = lr_scheduler.OneCycleLR(optimizer, max_lr=0.007, total_steps=eps * len(self.train_dataloader))
+        # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.1)
         # scheduler = lr_sc÷heduler.ExponentialLR(optimizer, gamma=0.8)
         
         patience = 0

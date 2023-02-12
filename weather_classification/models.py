@@ -18,13 +18,13 @@ class ViT(nn.Module):
         
         self.vit.heads = nn.Sequential(
             nn.Linear(768, 600),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(600, 300),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(300, 150),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(150, 32),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(32, n_classes)
         )
 

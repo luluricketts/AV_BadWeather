@@ -12,9 +12,13 @@ transform = transforms.Compose([
     transforms.RandomAffine(90),
     transforms.RandomRotation(90),
     transforms.PILToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
 ])
 eval_transform = transforms.Compose([
     transforms.PILToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
 ])
 
 

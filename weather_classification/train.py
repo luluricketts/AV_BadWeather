@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler, Adam
 from torch.utils.tensorboard import SummaryWriter
 
-from data.data import WeatherDataset, class_sampler, collate_fn, transform
+from data.data import WeatherDataset, class_sampler, collate_fn, transform, eval_transform
 import models
 
 
@@ -26,7 +26,7 @@ logging_levels = {
 
 class WeatherClass:
 
-    def __init__(self, model, train_dataloader, test_dataloader, exp):
+    def __init__(self, model, train_dataloader, val_dataloader, exp):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         if self.device != 'cuda':
             logging.warning('Could not establish connection to cuda')
@@ -34,19 +34,20 @@ class WeatherClass:
         self.writer = SummaryWriter(log_dir=f'results/{exp}')
 
         self.train_dataloader = train_dataloader
-        self.test_dataloader = test_dataloader
+        self.val_dataloader = val_dataloader
 
         model = nn.DataParallel(model)
         self.model = model.to(self.device)
-        
 
-    def train(self, eps, lr):
-        # TODO pass these in as params
-        loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss()       
+
+    def train(self, eps, lr, early_stop_epoch):
+
         optimizer = Adam(self.model.parameters(), lr=lr)
         scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.8)
         
-        losses = []
+        patience = 0
+        best_val_loss = 1000000
         for ep in range(eps):
             logging.info(f'-----------EPOCH {ep}-----------')
             logging.info(f'Learning rate: {optimizer.param_groups[0]["lr"]}')
@@ -61,7 +62,7 @@ class WeatherClass:
                 y = y.to(self.device)
 
                 pred = self.model(X)
-                loss = loss_fn(pred, y)
+                loss = self.loss_fn(pred, y)
                 train_loss += loss.detach().item()
                 train_acc += torch.sum(torch.argmax(pred, axis=1) == y).detach().item()
                 
@@ -71,20 +72,44 @@ class WeatherClass:
                 del X,y,loss,pred
                 torch.cuda.empty_cache()
 
+            
+            val_loss = 0
+            val_acc = 0
+            self.model.eval()
+            for X,y,_ in self.val_dataloader: 
+                X = X.to(self.device).float()
+                y = y.to(self.device)
 
+                pred = self.model(X)
+                loss = self.loss_fn(pred, y)
+                val_loss += loss.detach().item()
+                val_acc += torch.sum(torch.argmax(pred, axis=1) == y).detach().item()
+        
+                del X,y,loss,pred
+                torch.cuda.empty_cache()
+            
+            val_acc /= len(dataloader.dataset)
             train_acc /= len(self.train_dataloader.dataset)
-            losses.append(train_loss)
             logging.info(f'EPOCH {ep}: Loss {round(train_loss, 4)}\t Accuracy {train_acc}')
             self.writer.add_scalar('Loss/train', train_loss, ep)
             self.writer.add_scalar('Accuracy/train', train_acc, ep)
-            self.evaluate(loss_fn, ep)
+            self.writer.add_scalar('Loss/val', val_loss, ep)
+            self.writer.add_scalar('Accuracy/val', val_acc, ep)
             scheduler.step()
 
-        if len(losses) > 1 and losses[-1] - losses[-2] <= 0.001:
-            return
+            # early stopping
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience = 0
+            else:
+                patience += 1
+            
+            if patience == early_stop_epoch:
+                print(f"Early Stopped at Epoch: {epoch}")
+                break
 
 
-    def evaluate(self, loss_fn, ep):
+    def evaluate(self, dataloader):
         """
         Computes train/test accuracy and test loss
         """
@@ -92,21 +117,21 @@ class WeatherClass:
 
         test_loss = 0
         test_acc = 0
-        for X,y,_ in self.test_dataloader: 
+        for X,y,_ in dataloader: 
             X = X.to(self.device).float()
             y = y.to(self.device)
 
             pred = self.model(X)
-            loss = loss_fn(pred, y)
+            loss = self.loss_fn(pred, y)
             test_loss += loss.detach().item()
             test_acc += torch.sum(torch.argmax(pred, axis=1) == y).detach().item()
     
             del X,y,loss,pred
             torch.cuda.empty_cache()
         
-        test_acc /= len(self.test_dataloader.dataset)
-        self.writer.add_scalar('Loss/test', test_loss, ep)
-        self.writer.add_scalar('Accuracy/test', test_acc, ep)
+        test_acc /= len(dataloader.dataset)
+        return test_acc
+
 
     def save_model(self, path):
         torch.save(self.model.state_dict(), path)
@@ -125,14 +150,22 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg["device_IDs"]  # specify which GPU(s) to be used
     
     # define base model
-    model = getattr(models, cfg["model"])(cfg["params"])
+    model = getattr(models, cfg["model"])(cfg["eng_feats"], cfg["freeze_backbone"], cfg["params"])
 
-    train_data = WeatherDataset(cfg["metadata_train"], transform=transform)
-    test_data = WeatherDataset(cfg["metadata_test"], transform=transform)
+    train_data = WeatherDataset(cfg["metadata_train"], transform=transform if cfg["data_aug"] else eval_transform)
+    val_data = WeatherDataset(cfg["metadata_val"], transform=eval_transform)
+    test_data = WeatherDataset(cfg["metadata_test"], transform=eval_transform)
     train_dataloader = DataLoader(
         train_data, 
         batch_size=cfg["batch_size"], 
         sampler=class_sampler(cfg["class_counts"], cfg["metadata_train"]),
+        collate_fn=collate_fn,
+        num_workers=8
+    )
+    val_dataloader = DataLoader(
+        val_data,
+        batch_size=cfg["batch_size"],
+        shuffle=False,
         collate_fn=collate_fn,
         num_workers=8
     )
@@ -143,12 +176,15 @@ if __name__ == "__main__":
         collate_fn=collate_fn,
         num_workers=8)
 
-    Weather = WeatherClass(model, train_dataloader, test_dataloader, args.exp_name)
-    with open(os.path.join("results", args.exp_name, "config.yaml"), "w") as outfile:
-        yaml.dump(cfg, outfile, default_flow_style=False)
+    Weather = WeatherClass(model, train_dataloader, val_dataloader, args.exp_name)
 
     # train
-    Weather.train(cfg["epochs"], cfg["lr"])
+    Weather.train(cfg["epochs"], cfg["lr"], cfg["early_stop_epoch"])
+    test_accuracy = Weather.evaluate(test_dataloader)
+    cfg["test_accuracy"] = test_accuracy
 
     path = os.path.join('results', args.exp_name, f'{args.exp_name}.pth')
     Weather.save_model(path)
+
+    with open(os.path.join("results", args.exp_name, "config.yaml"), "w") as outfile:
+        yaml.dump(cfg, outfile, default_flow_style=False)

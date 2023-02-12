@@ -12,7 +12,7 @@ import setup_datasets
 # pass name in as arg + config file
 # only to add now, change to update existing later
 parser = argparse.ArgumentParser()
-parser.add_argument("--cfg", type=str, help="path to (yaml) config file")
+parser.add_argument("--cfg", type=str, default="config.yaml", help="path to (yaml) config file")
 parser.add_argument("--dataset", type=str, nargs="+", required=True, help="1 or more dataset names as defined in cfg")
 if __name__ == "__main__":
     args = parser.parse_args()

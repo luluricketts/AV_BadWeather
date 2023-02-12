@@ -57,7 +57,7 @@ def add_MWI(cfg_file):
         
         shuffled = np.random.permutation(os.listdir(cls_dir))
         train_idx = int(len(shuffled) * cfg_file["train_ratio"])
-        val_idx = int((len(shuffled) - train_idx) // 2)
+        val_idx = int((len(shuffled) - train_idx) // 2) + train_idx
         for file in shuffled[:train_idx]:
             train_json[cfg_file["UID_train"]] = {
                 "img_path" : os.path.join(cls_dir, file),
@@ -105,7 +105,7 @@ def add_Dawn(cfg_file):
 
         shuffled = np.random.permutation(os.listdir(cls_dir))
         train_idx = int(len(shuffled) * cfg_file["train_ratio"])
-        val_idx = int((len(shuffled) - train_idx) // 2)
+        val_idx = int((len(shuffled) - train_idx) // 2) + train_idx
         for file in shuffled[:train_idx]:
             if '.jpg' not in file:
                 continue
@@ -148,7 +148,7 @@ def add_Dawn(cfg_file):
 
 
 def add_bdd100k(cfg_file):
-    train_json, test_json, cfg_file = load_json(cfg_file)
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
     bdd_base = os.path.join(cfg_file["dataset_path"], "bdd100k")
     bdd_train_img = os.path.join(bdd_base, "images", "100k", "train")
@@ -170,20 +170,32 @@ def add_bdd100k(cfg_file):
         cfg_file["UID_train"] += 1
         cfg_file["class_counts"][label] += 1
 
-    for item in bdd_val:
+    val_idx = int(len(bdd_val) // 2)
+    for i,item in enumerate(bdd_val):
         if item["attributes"]["weather"] not in cfg_file["labels"].values():
             continue
         label = list(cfg_file["labels"].values()).index(item["attributes"]["weather"])
-        test_json[cfg_file["UID_test"]] = {
-            "img_path" : os.path.join(bdd_val_img, item["name"]),
-            "source" : "BDD100k",
-            "label" : label
-        }
-        cfg_file["UID_test"] += 1
-        cfg_file["test_class_counts"][label] += 1
+        if i < val_idx:
+            val_json[cfg_file["UID_val"]] = {
+                "img_path" : os.path.join(bdd_val_img, item["name"]),
+                "source" : "BDD100k",
+                "label" : label
+            }
+            cfg_file["UID_val"] += 1
+            cfg_file["val_class_counts"][label] += 1
+        else:
+            test_json[cfg_file["UID_test"]] = {
+                "img_path" : os.path.join(bdd_val_img, item["name"]),
+                "source" : "BDD100k",
+                "label" : label
+            }
+            cfg_file["UID_test"] += 1
+            cfg_file["test_class_counts"][label] += 1
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
     with open(cfg_file["metadata_test"], "w") as file:
         json.dump(test_json, file)
 

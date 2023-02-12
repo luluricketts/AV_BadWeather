@@ -9,8 +9,8 @@ from torchvision import transforms
 
 
 transform = transforms.Compose([
-    # transforms.RandomAffine(90),
-    # transforms.RandomRotation(90),
+    transforms.RandomAffine(90),
+    transforms.RandomRotation(90),
     transforms.PILToTensor(),
 ])
 eval_transform = transforms.Compose([
@@ -39,11 +39,12 @@ def collate_fn(batch):
 
 class WeatherDataset(Dataset):
 
-    def __init__(self, metadata_json, transform=None):
+    def __init__(self, metadata_json, transform=None, img_size=(224, 224)):
         with open(metadata_json) as file:
             self.metadata = json.load(file)
         
         self.transform = transform
+        self.img_size = img_size
 
     def __len__(self):
         return len(self.metadata)
@@ -53,7 +54,7 @@ class WeatherDataset(Dataset):
         idx = str(idx)
         img_path = self.metadata[idx]["img_path"]
         img = Image.open(img_path)
-        img = img.resize((224, 224), Image.ANTIALIAS)
+        img = img.resize(self.img_size, Image.ANTIALIAS)
 
         label = torch.tensor(self.metadata[idx]["label"])
         

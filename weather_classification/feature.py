@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import torchvision.transforms.functional as tvF
 
 # ALL FUNCS TAKE IN 3x224x224 tensor
 
@@ -12,22 +13,23 @@ def batch_histogram(features, bins):
     
     return hist
 
-def dark_channel(img):
+def dark_channel(img, hist):
     # img tensor of shape 3x224x224
     # returns hist
     dark = nn.MaxPool2d((3,3), stride=1, padding=1)
     dark_chan = -dark(-img)
     dark_c = torch.min(dark_chan, dim=1).values
 
-    dark_hist = batch_histogram(dark_c, bins=25)
-    return dark_hist
-
+    if hist:
+        dark_hist = batch_histogram(dark_c, bins=25)
+        return dark_hist
+    return dark_c
 
 def hog(img):
     ...
 
 
-def saturation(img):
+def saturation(img, hist):
     """
     returns 10-dim feature vector for saturation
     """
@@ -35,28 +37,37 @@ def saturation(img):
     img_hsv = [cv2.cvtColor(i, cv2.COLOR_RGB2HSV) for i in img]
     img_hsv = torch.from_numpy(np.array(img_hsv))
 
-    sat_hist = batch_histogram(img_hsv[:,:,:,1], bins=10)
-    return sat_hist
+    if hist:
+        sat_hist = batch_histogram(img_hsv[:,:,:,1], bins=10)
+        return sat_hist
+    return img_hsv[:,:,:,1]
 
 
-def local_contrast(img, ksize=11):
+def local_contrast(img, ksize, hist):
     
     windows = F.unfold(img, kernel_size=ksize, stride=1)
     var = torch.var(windows, unbiased=False, dim=1)
     out = F.fold(var, (img.shape[2]-ksize+1, img.shape[3]-ksize+1), kernel_size=1)
     
-    contr_hist = batch_histogram(out, bins=10)
-    return contr_hist
+    if hist:
+        contr_hist = batch_histogram(out, bins=10)
+        return contr_hist
+    return F.pad(out, (5, 5, 5, 5), mode='constant', value=0)
 
 
-def get_all_features(img):
+def get_all_features(img, hist=True):
     img = img.cpu()
 
-    dark = dark_channel(img)
-    sat = saturation(img)
-    contrast = local_contrast(img)
-    
-    features = torch.concat((dark, sat, contrast), dim=1)
+    dark = dark_channel(img, hist)
+    sat = saturation(img, hist)
+    contrast = local_contrast(img, 11, hist)
+    if hist:
+        features = torch.concat((dark, sat, contrast), dim=1)
+    else:
+        dark = dark.unsqueeze(1)
+        sat = sat.unsqueeze(1)
+        contrast = contrast.unsqueeze(1)
+        features = torch.concat((dark, sat, contrast), dim=1)
     return features.to('cuda')
 
 

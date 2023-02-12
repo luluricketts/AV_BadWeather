@@ -1,12 +1,16 @@
 import os
 import json
 import yaml
+import numpy as np
 
 def reset_cfg(cfg):
     cfg["UID_train"] = 0
+    cfg["UID_val"] = 0
     cfg["UID_test"] = 0
     for k in cfg["class_counts"]:
         cfg["class_counts"][k] = 0
+    for k in cfg["val_class_counts"]:
+        cfg["val_class_counts"][k] = 0
     for k in cfg["test_class_counts"]:
         cfg["test_class_counts"][k] = 0
     return cfg
@@ -14,9 +18,11 @@ def reset_cfg(cfg):
 
 def load_json(cfg):
     train_path = cfg["metadata_train"]
+    val_path = cfg["metadata_val"]
     test_path = cfg["metadata_test"]
-    if not os.path.isfile(train_path) or not os.path.isfile(test_path):
+    if not os.path.isfile(train_path) or not os.path.isfile(test_path) or not os.path.isfile(val_path):
         open(train_path, "w+")
+        open(val_path, "w+")
         open(test_path, "w+")
         cfg = reset_cfg(cfg)
     with open(train_path) as file: 
@@ -24,17 +30,22 @@ def load_json(cfg):
             train_json = json.load(file)
         except json.JSONDecodeError:
             train_json = {}
+    with open(val_path) as file:
+        try:
+            val_json = json.load(file)
+        except json.JSONDecodeError:
+            val_json = {}
     with open(test_path) as file:
         try:
             test_json = json.load(file)
         except json.JSONDecodeError:
             test_json = {}
 
-    return train_json, test_json, cfg
+    return train_json, val_json, test_json, cfg
 
 
 def add_MWI(cfg_file):
-    train_json, test_json, cfg_file = load_json(cfg_file)
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
     mwi_base = os.path.join(cfg_file["dataset_path"], "MWI-Dataset")
     mwi_fog = os.path.join(mwi_base, "MWI-HAZE")
@@ -44,8 +55,10 @@ def add_MWI(cfg_file):
 
     for i,cls_dir in enumerate([mwi_clear, mwi_rain, mwi_snow, mwi_fog]):
         
-        train_idx = int(len(os.listdir(cls_dir)) * cfg_file["train_ratio"])
-        for file in sorted(os.listdir(cls_dir))[:train_idx]:
+        shuffled = np.random.permutation(os.listdir(cls_dir))
+        train_idx = int(len(shuffled) * cfg_file["train_ratio"])
+        val_idx = int((len(shuffled) - train_idx) // 2)
+        for file in shuffled[:train_idx]:
             train_json[cfg_file["UID_train"]] = {
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "MWI",
@@ -53,7 +66,15 @@ def add_MWI(cfg_file):
             }
             cfg_file["UID_train"] += 1
             cfg_file["class_counts"][i] += 1
-        for file in sorted(os.listdir(cls_dir))[train_idx:]:    
+        for file in shuffled[train_idx:val_idx]:
+            val_json[cfg_file["UID_val"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "MWI",
+                "label" : i,
+            }
+            cfg_file["UID_val"] += 1
+            cfg_file["val_class_counts"][i] += 1
+        for file in shuffled[val_idx:]:    
             test_json[cfg_file["UID_test"]] = {
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "MWI",
@@ -64,6 +85,8 @@ def add_MWI(cfg_file):
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
     with open(cfg_file["metadata_test"], "w") as file:
         json.dump(test_json, file)
 
@@ -71,7 +94,7 @@ def add_MWI(cfg_file):
 
 
 def add_Dawn(cfg_file):
-    train_json, test_json, cfg_file = load_json(cfg_file)
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
     dawn_base = os.path.join(cfg_file["dataset_path"], "Dawn")
     dawn_fog = os.path.join(dawn_base, "Fog")
@@ -80,8 +103,10 @@ def add_Dawn(cfg_file):
 
     for i,cls_dir in enumerate([dawn_rain, dawn_snow, dawn_fog], start=1):
 
-        train_idx = int(len(os.listdir(cls_dir)) * cfg_file["train_ratio"])
-        for file in sorted(os.listdir(cls_dir))[:train_idx]:
+        shuffled = np.random.permutation(os.listdir(cls_dir))
+        train_idx = int(len(shuffled) * cfg_file["train_ratio"])
+        val_idx = int((len(shuffled) - train_idx) // 2)
+        for file in shuffled[:train_idx]:
             if '.jpg' not in file:
                 continue
             train_json[cfg_file["UID_train"]] = {
@@ -91,7 +116,17 @@ def add_Dawn(cfg_file):
             }
             cfg_file["UID_train"] += 1
             cfg_file["class_counts"][i] += 1
-        for file in sorted(os.listdir(cls_dir))[train_idx:]:
+        for file in shuffled[train_idx:val_idx]:
+            if '.jpg' not in file:
+                continue
+            val_json[cfg_file["UID_val"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "Dawn",
+                "label" : i,
+            }
+            cfg_file["UID_val"] += 1
+            cfg_file["val_class_counts"][i] += 1
+        for file in shuffled[train_idx:]:
             if '.jpg' not in file:
                 continue
             test_json[cfg_file["UID_test"]] = {
@@ -104,6 +139,8 @@ def add_Dawn(cfg_file):
 
     with open(cfg_file["metadata_train"], "w") as file:
         json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
     with open(cfg_file["metadata_test"], "w") as file:
         json.dump(test_json, file)
 

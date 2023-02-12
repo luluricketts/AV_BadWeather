@@ -2,6 +2,7 @@ import argparse
 import logging
 import os 
 
+from tqdm.auto import tqdm
 import yaml
 from yaml import safe_load as yload
 import torch
@@ -47,15 +48,14 @@ class WeatherClass:
         
         losses = []
         for ep in range(eps):
+            logging.info(f'-----------EPOCH {ep}-----------')
             logging.info(f'Learning rate: {optimizer.param_groups[0]["lr"]}')
             self.model.train()
 
             train_loss = 0
             train_acc = 0
-            for i,(X,y,_) in enumerate(self.train_dataloader):
+            for i,(X,y,_) in enumerate(tqdm(self.train_dataloader)):
                 
-                if i % 250 == 0:
-                    logging.info(f'Processing batch {i}/{len(self.train_dataloader)}')
                 optimizer.zero_grad()
                 X = X.to(self.device).float()
                 y = y.to(self.device)
@@ -150,5 +150,5 @@ if __name__ == "__main__":
     # train
     Weather.train(cfg["epochs"], cfg["lr"])
 
-    path = os.path.join('results', f'{args.exp_name}.pth')
+    path = os.path.join('results', args.exp_name, f'{args.exp_name}.pth')
     Weather.save_model(path)

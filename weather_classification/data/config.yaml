@@ -20,12 +20,12 @@ labels:
   2: snowy
   3: foggy
 logging: 2
-lr: 0.002
+lr: 0.005
 metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
 metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
 metadata_val: /home/lulu/AV_BadWeather/weather_classification/data/val.json
-model: Resnet_nofeatures
-notes: no features, sigmoid activation in final layer, FROZE BACKBONE
+model: ViT
+notes:
 params: null
 test_class_counts:
   0: 3751
@@ -38,7 +38,7 @@ val_class_counts:
   1: 590
   2: 652
   3: 538
-early_stop_epoch: 3
+early_stop_epoch: 5
 eng_feats: False
-freeze_backbone: False
-data_aug: True
+freeze_backbone: True
+data_aug: False

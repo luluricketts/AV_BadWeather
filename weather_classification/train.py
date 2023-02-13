@@ -70,6 +70,7 @@ class WeatherClass:
                 
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
 
                 del X,y,loss,pred
                 torch.cuda.empty_cache()
@@ -97,7 +98,7 @@ class WeatherClass:
             self.writer.add_scalar('Accuracy/train', train_acc, ep)
             self.writer.add_scalar('Loss/val', val_loss, ep)
             self.writer.add_scalar('Accuracy/val', val_acc, ep)
-            scheduler.step()
+
 
             # early stopping
             if val_loss < best_val_loss:
@@ -108,7 +109,8 @@ class WeatherClass:
             
             if patience == early_stop_epoch:
                 print(f"Early Stopped at Epoch: {ep}")
-                break
+                return train_acc, val_acc
+
 
 
     def evaluate(self, dataloader):
@@ -181,8 +183,10 @@ if __name__ == "__main__":
     Weather = WeatherClass(model, train_dataloader, val_dataloader, args.exp_name)
 
     # train
-    Weather.train(cfg["epochs"], cfg["lr"], cfg["early_stop_epoch"])
+    train_acc, val_acc = Weather.train(cfg["epochs"], cfg["lr"], cfg["early_stop_epoch"])
     test_accuracy = Weather.evaluate(test_dataloader)
+    cfg["train_accuracy"] = train_acc
+    cfg["val_accuracy"] = val_acc
     cfg["test_accuracy"] = test_accuracy
 
     path = os.path.join('results', args.exp_name, f'{args.exp_name}.pth')

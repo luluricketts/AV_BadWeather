@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchmetrics import ConfusionMatrix
 from yaml import safe_load as yload
+from tqdm.auto import tqdm
 
 import models
 from data.data import WeatherDataset, eval_transform, collate_fn
@@ -21,7 +22,7 @@ def configure_model(model_type, params):
     return model
 
 
-def generate_results_report(model, dataloader):
+def generate_results_report(model, dataloader, dataset_name):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if device != 'cuda':
@@ -32,11 +33,8 @@ def generate_results_report(model, dataloader):
     all_preds = None
     all_y = None
     srcs = None
-    for i,(X,y,src) in enumerate(dataloader): 
+    for i,(X,y,src) in enumerate(tqdm(dataloader)): 
         src = np.array(src)
-
-        if i % 10 == 0:
-            print(f'Processing batch {i}/{len(dataloader)}')
 
         X = X.to(device).float()
         pred = model(X)
@@ -56,7 +54,7 @@ def generate_results_report(model, dataloader):
         torch.cuda.empty_cache()
 
     print('------------------------------------------------------')
-    print('Reports analysis')
+    print(f'Reports analysis: {dataset_name}')
     print('------------------------------------------------------')
     print(f'Overall accuracy: {correct / len(dataloader.dataset)}')
     print('------------------------------------------------------')
@@ -80,6 +78,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='data/config.yaml')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--train', action='store_true')
+parser.add_argument('--val', action='store_true')
 if __name__ == "__main__":
     args = parser.parse_args()
     with open(args.config, "r") as file:
@@ -95,19 +94,30 @@ if __name__ == "__main__":
         train_dataset = WeatherDataset(cfg["metadata_train"], transform=eval_transform)
         train_dataloader = DataLoader(
             train_dataset, 
-            batch_size=len(train_dataset), 
+            batch_size=cfg["batch_size"], 
             shuffle=False, 
             collate_fn=collate_fn,
             num_workers=8
         )
-        generate_results_report(model, train_dataloader)
+        generate_results_report(model, train_dataloader, 'TRAIN')
+
+    if args.val:
+        val_dataset = WeatherDataset(cfg["metadata_val"], transform=eval_transform)
+        val_dataloader = DataLoader(
+            val_dataset,
+            batch_size=cfg["batch_size"],
+            shuffle=False,
+            collate_fn=collate_fn,
+            num_workers=8
+        )
+        generate_results_report(model, val_dataloader, 'VAL')
     
     if args.test:
         test_dataset = WeatherDataset(cfg["metadata_test"], transform=eval_transform)
         test_dataloader = DataLoader(
             test_dataset,
-            batch_size=128,
+            batch_size=cfg["batch_size"],
             collate_fn=collate_fn,
             shuffle=False
         )    
-        generate_results_report(model, test_dataloader)
+        generate_results_report(model, test_dataloader, 'TEST')

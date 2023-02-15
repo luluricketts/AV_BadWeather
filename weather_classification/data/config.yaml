@@ -24,7 +24,7 @@ lr: 0.005
 metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
 metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
 metadata_val: /home/lulu/AV_BadWeather/weather_classification/data/val.json
-model: ViT
+model: get_resnet50
 notes:
 params: null
 test_class_counts:

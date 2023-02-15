@@ -44,9 +44,9 @@ class WeatherClass:
     def train(self, eps, lr, early_stop_epoch):
 
         optimizer = Adam(self.model.parameters(), lr=lr, weight_decay=0.01)
-        scheduler = lr_scheduler.OneCycleLR(optimizer, max_lr=0.007, total_steps=eps * len(self.train_dataloader))
+        # scheduler = lr_scheduler.OneCycleLR(optimizer, max_lr=0.005, total_steps=eps * len(self.train_dataloader))
         # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.1)
-        # scheduler = lr_sc÷heduler.ExponentialLR(optimizer, gamma=0.8)
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.8)
         
         patience = 0
         best_val_loss = 1000000
@@ -70,12 +70,13 @@ class WeatherClass:
                 
                 loss.backward()
                 optimizer.step()
-                scheduler.step()
+                # scheduler.step()
 
                 del X,y,loss,pred
                 torch.cuda.empty_cache()
 
             
+            scheduler.step()
             val_loss = 0
             val_acc = 0
             self.model.eval()
@@ -93,7 +94,8 @@ class WeatherClass:
             
             val_acc /= len(self.val_dataloader.dataset)
             train_acc /= len(self.train_dataloader.dataset)
-            logging.info(f'EPOCH {ep}: Loss {round(train_loss, 4)}\t Accuracy {train_acc}')
+            logging.info(f'EPOCH {ep}: \nTrain Loss {round(train_loss, 4)}\t Train Accuracy {train_acc}')
+            logging.info(f'\tVal Loss {round(val_loss, 4)}\t Val Accuracy {val_acc}')
             self.writer.add_scalar('Loss/train', train_loss, ep)
             self.writer.add_scalar('Accuracy/train', train_acc, ep)
             self.writer.add_scalar('Loss/val', val_loss, ep)

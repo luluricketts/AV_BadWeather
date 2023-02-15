@@ -47,6 +47,23 @@ class ViT(nn.Module):
         return output
 
 
+def get_resnet50(eng_feats=None, freeze_backbone=None, params=None, n_classes=4):
+    model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+    model.fc = nn.Linear(2048, n_classes) 
+
+    if params:
+        model.load_state_dict(torch.load(params))
+
+    if freeze_backbone:
+        print('freeze')
+        for param in model.parameters():
+            param.requires_grad = False
+        for param in model.fc.parameters():
+            param.requires_grad = True
+
+    return model
+
+
 
 class ResNet(nn.Module):
     def __init__(self, eng_feats:bool, freeze_backbone:bool, params=None, n_classes=4, feature_len=45):
@@ -59,10 +76,13 @@ class ResNet(nn.Module):
         self.classification_head = nn.Sequential(
             nn.Linear(1000 + feature_len, 512),
             nn.ReLU(),
+            # nn.Tanh(),
             nn.Linear(512, 128),
             nn.ReLU(),
+            # nn.Tanh(),
             nn.Linear(128, 32),
             nn.ReLU(),
+            # nn.Tanh(),
             nn.Linear(32, n_classes)
         )
 

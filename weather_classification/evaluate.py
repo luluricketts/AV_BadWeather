@@ -1,6 +1,7 @@
 import os
 import argparse
 
+import cv2
 import numpy as np
 import torch 
 import torch.nn as nn
@@ -13,9 +14,9 @@ import matplotlib.pyplot as plt
 import models
 from data.data import WeatherDataset, eval_transform, collate_fn
 
-def configure_model(model_type, params):
+def configure_model(model_type, params, eng_feats, freeze_backbone):
 
-    model = getattr(models, model_type)(False, False)
+    model = getattr(models, model_type)(eng_feats=eng_feats, freeze_backbone=freeze_backbone)
     model = model.to('cuda')
     model = nn.DataParallel(model)
     model.load_state_dict(torch.load(params))
@@ -24,6 +25,7 @@ def configure_model(model_type, params):
 
 
 def generate_results_report(model, dataloader, dataset_name, directory, file):
+
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if device != 'cuda':
@@ -104,11 +106,6 @@ def generate_results_report(model, dataloader, dataset_name, directory, file):
 
 
 
-    # TODO fix  this
-    # file.write('Per Source Accuracies:\n')
-    # for i in ['MWI', 'Dawn', 'BDD100k']:
-    #     idxs = np.where(srcs == i)
-    #     file.write(f'Source {i}: \t {torch.sum(all_y[idxs] == all_preds[idxs]) / len(idxs)}\n')
 
 
 
@@ -122,7 +119,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg["device_IDs"]  # specify which GPU(s) to be used
 
     params = os.path.join(directory, f'{args.dir}.pth')
-    model = configure_model(cfg["model"], params)
+    model = configure_model(cfg["model"], params, cfg['eng_feats'], cfg['freeze_backbone'])
 
     file = open(os.path.join(directory, 'eval.txt'), 'w+')
 

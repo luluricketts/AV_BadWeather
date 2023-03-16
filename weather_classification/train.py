@@ -76,6 +76,9 @@ class WeatherClass:
                 torch.cuda.empty_cache()
 
             
+            scheduler.step()
+
+            
             # scheduler.step()
             val_loss = 0
             val_acc = 0
@@ -100,7 +103,6 @@ class WeatherClass:
             self.writer.add_scalar('Accuracy/train', train_acc, ep)
             self.writer.add_scalar('Loss/val', val_loss, ep)
             self.writer.add_scalar('Accuracy/val', val_acc, ep)
-
 
             # early stopping
             if val_loss < best_val_loss:

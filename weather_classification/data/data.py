@@ -9,8 +9,8 @@ from torchvision import transforms
 
 
 transform = transforms.Compose([
-    transforms.RandomAffine(90),
-    transforms.RandomRotation(90),
+    # transforms.RandomAffine(90),
+    # transforms.RandomRotation(90),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
@@ -38,6 +38,11 @@ def class_sampler(class_counts, json_file):
 
 def collate_fn(batch):
     batch = list(filter(lambda x: x[0].shape[0] == 3, batch))
+    return default_collate(batch)
+
+
+def collate_noMWI(batch):
+    batch = list(filter(lambda x:x[0].shape[0] == 3 and x[3] != 'MWI', batch))
     return default_collate(batch)
 
 
@@ -70,3 +75,32 @@ class WeatherDataset(Dataset):
 
         return img, label, self.metadata[idx]["source"]
 
+
+class WeatherDatasetToResults(Dataset):
+
+    def __init__(self, metadata_json, transform=None, img_size=(224, 224)):
+        with open(metadata_json) as file:
+            self.metadata = json.load(file)
+        
+        self.transform = transform
+        self.img_size = img_size
+
+    def __len__(self):
+        return len(self.metadata)
+
+    def __getitem__(self, idx):
+
+        idx = str(idx)
+        img_path = self.metadata[idx]["img_path"]
+        img = Image.open(img_path)
+        img = img.resize(self.img_size, Image.ANTIALIAS)
+
+        label = torch.tensor(self.metadata[idx]["label"])
+        
+        if self.transform:
+            try:
+                img = self.transform(img)
+            except:
+                img = transforms.ToTensor()(img) # will get collated out
+
+        return img, label, self.metadata[idx]['img_path'], self.metadata[idx]['source']

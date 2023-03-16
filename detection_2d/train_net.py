@@ -15,12 +15,11 @@ Therefore, we recommend you to use detectron2 as an library and take
 this file as an example of how to use the library.
 You may want to write your own script with your datasets and other customizations.
 """
-​
+
 import logging
 import os
 from collections import OrderedDict
 import torch
-​
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
@@ -38,12 +37,12 @@ from detectron2.evaluation import (
     verify_results,
 )
 from detectron2.modeling import GeneralizedRCNNWithTTA
-​
-from register_datasets import register_bdd100k, register_argoverse_hd, register_nuimages
-dataset_strings = register_bdd100k()
-dataset_strings = register_argoverse_hd()
-dataset_strings = register_nuimages()
-​
+
+# from register_datasets import register_bdd100k, register_argoverse_hd, register_nuimages
+# dataset_strings = register_bdd100k()
+# dataset_strings = register_argoverse_hd()
+# dataset_strings = register_nuimages()
+
 def build_evaluator(cfg, dataset_name, output_folder=None):
     """
     Create evaluator(s) for a given dataset.
@@ -83,8 +82,8 @@ def build_evaluator(cfg, dataset_name, output_folder=None):
     elif len(evaluator_list) == 1:
         return evaluator_list[0]
     return DatasetEvaluators(evaluator_list)
-​
-​
+
+
 class Trainer(DefaultTrainer):
     """
     We use the "DefaultTrainer" which contains pre-defined default logic for
@@ -92,11 +91,11 @@ class Trainer(DefaultTrainer):
     are working on a new research project. In that case you can write your
     own training loop. You can use "tools/plain_train_net.py" as an example.
     """
-​
+
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
         return build_evaluator(cfg, dataset_name, output_folder)
-​
+
     @classmethod
     def test_with_TTA(cls, cfg, model):
         logger = logging.getLogger("detectron2.trainer")
@@ -113,8 +112,8 @@ class Trainer(DefaultTrainer):
         res = cls.test(cfg, model, evaluators)
         res = OrderedDict({k + "_TTA": v for k, v in res.items()})
         return res
-​
-​
+
+
 def setup(args):
     """
     Create configs and perform basic setups.
@@ -125,11 +124,11 @@ def setup(args):
     cfg.freeze()
     default_setup(cfg, args)
     return cfg
-​
-​
+
+
 def main(args):
     cfg = setup(args)
-​
+
     if args.eval_only:
         model = Trainer.build_model(cfg)
         DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
@@ -141,7 +140,7 @@ def main(args):
         if comm.is_main_process():
             verify_results(cfg, res)
         return res
-​
+
     """
     If you'd like to do anything fancier than the standard training logic,
     consider writing your own training loop (see plain_train_net.py) or
@@ -154,8 +153,8 @@ def main(args):
             [hooks.EvalHook(0, lambda: trainer.test_with_TTA(cfg, trainer.model))]
         )
     return trainer.train()
-​
-​
+
+
 if __name__ == "__main__":
     args = default_argument_parser().parse_args()
     print("Command Line Args:", args)

@@ -203,4 +203,90 @@ def add_bdd100k(cfg_file):
     
 
 
+def add_DENSE(cfg_file):
 
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
+
+    dense_base = '/media/kolossus_data3/bad_weather_data/DENSE'
+    dense_imgs = os.path.join(dense_base, 'cam_stereo_left_lut')
+    dense_labels = os.path.join(dense_base, 'labeltool_labels')
+
+    def read_label(file):
+        
+        with open(os.path.join(dense_labels, file.split('.')[0] + '.json'), 'r') as file:
+            data = json.load(file)
+        if data['weather']['clear']:
+            return 0
+        if data['weather']['rain']:
+            return 1
+        if data['weather']['snow']:
+            return 2
+        if data['weather']['dense_fog'] or data['weather']['light_fog']:
+            return 3
+  
+        return -1
+
+
+    shuffled = np.random.permutation(os.listdir(dense_imgs))
+    train_idx = int(len(shuffled) * cfg_file["train_ratio"])
+    val_idx = int((len(shuffled) - train_idx) // 2) + train_idx
+
+    for file in shuffled[:train_idx]:
+        if '.png' not in file:
+            continue
+        try:
+            label = read_label(file)
+            if label == -1: continue
+        except:
+            print('FAILED TO READ JSON')
+            continue
+        train_json[cfg_file["UID_train"]] = {
+            "img_path" : os.path.join(dense_imgs, file),
+            "source" : "DENSE",
+            "label" : label,
+        }
+        cfg_file["UID_train"] += 1
+        cfg_file["class_counts"][label] += 1
+    
+    for file in shuffled[train_idx:val_idx]:
+        if '.png' not in file:
+            continue
+        try:
+            label = read_label(file)
+            if label == -1: continue
+        except:
+            print(f'Failed to read json for {file}')
+            continue
+        val_json[cfg_file["UID_val"]] = {
+            "img_path" : os.path.join(dense_imgs, file),
+            "source" : "DENSE",
+            "label" : label,
+        }
+        cfg_file["UID_val"] += 1
+        cfg_file["val_class_counts"][label] += 1
+    
+    for file in shuffled[val_idx:]:
+        if '.png' not in file:
+            continue
+        try:
+            label = read_label(file)
+            if label == -1: continue
+        except:
+            print('FAILED TO READ JSON')
+            continue
+        test_json[cfg_file["UID_test"]] = {
+            "img_path" : os.path.join(dense_imgs, file),
+            "source" : "DENSE",
+            "label" : label,
+        }
+        cfg_file["UID_test"] += 1
+        cfg_file["test_class_counts"][label] += 1
+
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file

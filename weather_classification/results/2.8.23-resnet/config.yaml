@@ -1,0 +1,33 @@
+UID_test: 10990
+UID_train: 64569
+batch_size: 128
+class_counts:
+  0: 45903
+  1: 6906
+  2: 7391
+  3: 4369
+dataset_path: /home/lulu/datasets
+datasets:
+  BDD: add_bdd100k
+  Dawn: add_Dawn
+  MWI: add_MWI
+device_IDs: 0,1
+epochs: 20
+labels:
+  0: clear
+  1: rainy
+  2: snowy
+  3: foggy
+logging: 2
+lr: 0.005
+metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
+metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
+model: ResNet
+notes: resnet, features, no data aug. froze first 3 layers
+params: null
+test_class_counts:
+  0: 7486
+  1: 1199
+  2: 1231
+  3: 1074
+train_ratio: 0.8

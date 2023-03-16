@@ -1,0 +1,48 @@
+UID_test: 6841
+UID_train: 74969
+UID_val: 6815
+batch_size: 128
+class_counts:
+  0: 50967
+  1: 7006
+  2: 11083
+  3: 5913
+data_aug: false
+dataset_path: /home/lulu/datasets
+datasets:
+  BDD: add_bdd100k
+  DENSE: add_DENSE
+  Dawn: add_Dawn
+  MWI: add_MWI
+device_IDs: '0'
+early_stop_epoch: 5
+eng_feats: true
+epochs: 20
+freeze_backbone: true
+labels:
+  0: clear
+  1: rainy
+  2: snowy
+  3: foggy
+logging: 2
+lr: 0.005
+metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
+metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
+metadata_val: /home/lulu/AV_BadWeather/weather_classification/data/val.json
+model: ResNet
+notes: null
+params: null
+test_accuracy: 0.7745943575500658
+test_class_counts:
+  0: 4361
+  1: 633
+  2: 1082
+  3: 765
+train_accuracy: 0.761714842134749
+train_ratio: 0.8
+val_accuracy: 0.7577402787967719
+val_class_counts:
+  0: 4383
+  1: 603
+  2: 1095
+  3: 734

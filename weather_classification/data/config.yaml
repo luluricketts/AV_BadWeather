@@ -1,44 +1,45 @@
-UID_test: 5541
-UID_train: 64572
-UID_val: 5515
+UID_test: 6841
+UID_train: 74969
+UID_val: 6815
 batch_size: 128
 class_counts:
-  0: 45903
-  1: 6907
-  2: 7393
-  3: 4369
+  0: 50967
+  1: 7006
+  2: 11083
+  3: 5913
+data_aug: false
 dataset_path: /home/lulu/datasets
 datasets:
   BDD: add_bdd100k
+  DENSE: add_DENSE
   Dawn: add_Dawn
   MWI: add_MWI
 device_IDs: 2,3
-epochs: 50
+early_stop_epoch: 5
+eng_feats: true
+epochs: 20
+freeze_backbone: false
 labels:
   0: clear
   1: rainy
   2: snowy
   3: foggy
 logging: 2
-lr: 0.005
+lr: 0.0001
 metadata_test: /home/lulu/AV_BadWeather/weather_classification/data/test.json
 metadata_train: /home/lulu/AV_BadWeather/weather_classification/data/train.json
 metadata_val: /home/lulu/AV_BadWeather/weather_classification/data/val.json
-model: get_resnet50
-notes:
+model: FeaturesOnly
+notes: null
 params: null
 test_class_counts:
-  0: 3751
-  1: 627
-  2: 597
-  3: 566
+  0: 4361
+  1: 633
+  2: 1082
+  3: 765
 train_ratio: 0.8
 val_class_counts:
-  0: 3735
-  1: 590
-  2: 652
-  3: 538
-early_stop_epoch: 5
-eng_feats: True
-freeze_backbone: True
-data_aug: False
+  0: 4383
+  1: 603
+  2: 1095
+  3: 734

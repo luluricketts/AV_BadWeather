@@ -12,31 +12,42 @@ import numpy as np
 
 def main(json_file, args, client):
     sftp = client.open_sftp()
-    i = 0
     for k,v in json_file.items():
     
         if f'{args.label_type}_label' in v.keys():
             continue
+        if args.label_type == 'rc' and v['source'] == 'MWI':
+            json_file[k][f'{args.label_type}_label'] = 3 # no label
 
         key = None
         while key not in range(len(l_names[args.label_type])):
-            
-            with sftp.open(v['img_path']) as f:
-                img = cv2.imdecode(np.fromstring(f.read(), np.uint8), 1)
-                
-            cv2.imshow('image', img)
-            key = chr(cv2.waitKey(0))
+
+            if v['source'] == 'DENSE':
+                img_path = '/home/lulu/datasets/cam_stereo_left_lut/' + v['img_path'].split('/')[-1]
+            else:
+                img_path = v['img_path']
+
+            try:
+                with sftp.open(img_path) as f:
+                    img = cv2.imdecode(np.fromstring(f.read(), np.uint8), 1)            
+
+                cv2.imshow('image', img)
+                key = chr(cv2.waitKey(0))
+            except:
+                json_file[k][f'{args.label_type}_label'] = -1 # invalid shapes
+                break
 
             if key == 'q':
+                print(k)
                 return json_file
-            key = int(key)
+            try:
+                key = int(key)
+            except ValueError:
+                print('Incorrect label range, try again')
             if key not in range(len(l_names[args.label_type])):
                 print('Incorrect label range, try again')
         
-        json_file[k]['tod_label'] = key
-        i += 1
-        if i == 3:
-            break
+        json_file[k][f'{args.label_type}_label'] = key
 
     return json_file
 
@@ -46,7 +57,7 @@ parser.add_argument('--json', type=str, required=True, help='json file to edit')
 parser.add_argument('--label_type', type=str, required=True, choices=['tod', 'rc'])
 if __name__ == "__main__":
     args = parser.parse_args()
-    l_names = {'tod': ['day', 'night', 'dawn/dusk'], 'rc': ['dry', 'wet', 'no_road']}
+    l_names = {'tod': ['day', 'night', 'dawn/dusk'], 'rc': ['dry', 'wet', 'snow', 'no_road']}
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

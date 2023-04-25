@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect("gpuserver6.perception.cs.cmu.edu",username="lulu",password='0SO8cl18SD!',timeout=4)
+    client.connect("gpuserver6.perception.cs.cmu.edu",username="user",password='password',timeout=4)
 
     with open(args.json, 'r') as file:
         json_file = json.load(file)

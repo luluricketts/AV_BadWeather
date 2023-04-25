@@ -7,8 +7,11 @@ import torchvision.transforms.functional as tvF
 
 # ALL FUNCS TAKE IN 3x224x224 tensor
 
-def batch_histogram(features, bins):
-    hist = [list(torch.histogram(batch, bins=bins, density=True)[0]) for batch in features]
+def batch_histogram(features, bins, gt0=False):
+    if gt0:
+        hist = [list(torch.histogram(batch[batch>0], bins=bins, density=True)[0]) for batch in features]
+    else:
+        hist = [list(torch.histogram(batch, bins=bins, density=True)[0]) for batch in features]
     hist = torch.from_numpy(np.array(hist))
     
     return hist
@@ -25,8 +28,21 @@ def dark_channel(img, hist):
         return dark_hist
     return dark_c
 
+
 def hog(img):
-    ...
+    img = torch.movedim(img, 1, 3).numpy()
+    img = [255 * (i - np.min(i)) / (np.max(i) - np.min(i)) for i in img]
+    img = [cv2.cvtColor(i, cv2.COLOR_RGB2GRAY) for i in img]
+    low_freq = [cv2.GaussianBlur(i, (3, 3), 9) for i in img]
+    high_freq = [(img[i] - low_freq[i]).astype(np.uint8) for i in range(len(img))] 
+
+    # thres = [cv2.threshold(hi, 120, 255, cv2.THRESH_BINARY)[1].astype(np.uint8) for hi in high_freq]
+    hog = cv2.HOGDescriptor()
+    hist = [hog.compute(t) for t in high_freq]
+    hist = torch.tensor(np.asarray(hist))
+    hist = batch_histogram(hist, bins=200, gt0=True)
+
+    return hist
 
 
 def saturation(img, hist):
@@ -61,46 +77,80 @@ def get_all_features(img, hist=True):
     dark = dark_channel(img, hist)
     sat = saturation(img, hist)
     contrast = local_contrast(img, 11, hist)
+    hog_feat = hog(img)
+
     if hist:
-        features = torch.concat((dark, sat, contrast), dim=1)
+        features = torch.concat((dark, sat, contrast, hog), dim=1)
+        return features.to('cuda')
     else:
         dark = dark.unsqueeze(1)
         sat = sat.unsqueeze(1)
         contrast = contrast.unsqueeze(1)
         features = torch.concat((dark, sat, contrast), dim=1)
-    return features.to('cuda')
+        hist_features = hog_feat
+        # print(hist_features, hist_features.shape)
+        return features.to('cuda'), hist_features.to('cuda')
 
 
+# import skimage
+# import os
+# import matplotlib.pyplot as plt 
 
+# base = 'test2'
+# rain = os.path.join(base, 'rain.jpg')
+# clear = os.path.join(base, 'clear.jpg')
+# snow = os.path.join(base, 'snow.jpg')
+# fog = os.path.join(base, 'fog.jpg')
 
-# def test_features():
+# rimg = torch.tensor(skimage.io.imread(rain))
+# rimg = torch.movedim(rimg, 2, 0).float().unsqueeze(0)
+# dark, sat, con, hist = get_all_features(rimg, hist=False)
+# dark = dark.squeeze()
+# sat = sat.squeeze()
+# con = con.squeeze()
+# skimage.io.imsave(os.path.join(base, 'rain-dark.jpg'), dark)
+# skimage.io.imsave(os.path.join(base, 'rain-sat.jpg'), sat)
+# skimage.io.imsave(os.path.join(base, 'rain-con.jpg'), con)
+# skimage.io.imsave(os.path.join(base, 'rain-hog.jpg'), hist[0])
+# # plt.hist(hist[hist>0], bins=200, alpha=0.5)
+# # plt.savefig(os.path.join(base, 'rain-hist.jpg'))
 
-#     from data import WeatherDataset
-#     from train import transform, collate_fn
-#     from torch.utils.data import DataLoader
-#     import skimage
-#     import os
+# cimg = torch.tensor(skimage.io.imread(clear))
+# cimg = torch.movedim(cimg, 2, 0).float().unsqueeze(0)
+# dark, sat, con, hist = get_all_features(cimg, hist=False)
+# dark = dark.squeeze()
+# sat = sat.squeeze()
+# con = con.squeeze()
+# skimage.io.imsave(os.path.join(base, 'clear-dark.jpg'), dark)
+# skimage.io.imsave(os.path.join(base, 'clear-sat.jpg'), sat)
+# skimage.io.imsave(os.path.join(base, 'clear-con.jpg'), con)
+# skimage.io.imsave(os.path.join(base, 'clear-hog.jpg'), hist[0])
+# # plt.hist(hist[hist>0], bins=200, alpha=0.5)
+# # plt.savefig(os.path.join(base, 'clear-hist.jpg'))
 
-#     save_path = './test_imgs'
+# simg = torch.tensor(skimage.io.imread(snow))
+# simg = torch.movedim(simg, 2, 0).float().unsqueeze(0)
+# dark, sat, con, hist = get_all_features(simg, hist=False)
+# dark = dark.squeeze()
+# sat = sat.squeeze()
+# con = con.squeeze()
+# skimage.io.imsave(os.path.join(base, 'snow-dark.jpg'), dark)
+# skimage.io.imsave(os.path.join(base, 'snow-sat.jpg'), sat)
+# skimage.io.imsave(os.path.join(base, 'snow-con.jpg'), con)
+# skimage.io.imsave(os.path.join(base, 'snow-hog.jpg'), hist[0])
+# # plt.hist(hist[hist>0], bins=200, alpha=0.5)
+# # plt.savefig(os.path.join(base, 'snow-hist.jpg'))
 
-#     data_dir = '../../data/weather_classification/data'
-#     train = '../../data/weather_classification/train.json'
-#     dataset = WeatherDataset(data_dir, train, transform=transform)
-#     dataloader = DataLoader(
-#         dataset, 
-#         batch_size=1, 
-#         shuffle=True, 
-#         collate_fn=collate_fn,
-#         num_workers=1
-#     )
+# fimg = torch.tensor(skimage.io.imread(fog))
+# fimg = torch.movedim(fimg, 2, 0).float().unsqueeze(0)
+# dark, sat, con, hist = get_all_features(fimg, hist=False)
+# dark = dark.squeeze()
+# sat = sat.squeeze()
+# con = con.squeeze()
+# skimage.io.imsave(os.path.join(base, 'fog-dark.jpg'), dark)
+# skimage.io.imsave(os.path.join(base, 'fog-sat.jpg'), sat)
+# skimage.io.imsave(os.path.join(base, 'fog-con.jpg'), con)
+# skimage.io.imsave(os.path.join(base, 'fog-hog.jpg'), hist[0])
+# # plt.hist(hist[hist>0], bins=200, alpha=0.5)
+# # plt.savefig(os.path.join(base, 'fog-hist.jpg'))
 
-
-#     for X,y,_ in dataloader:
-#         X = torch.squeeze(X, dim=0)
-
-#         f = local_contrast(X)
-#         print(f, f.shape, f.sum(), type(f))
-#         break
-
-
-# test_features()

@@ -43,9 +43,9 @@ class WeatherClass:
 
     def train(self, eps, lr, early_stop_epoch):
 
-        optimizer = Adam(self.model.parameters(), lr=lr, weight_decay=0.01)
-        scheduler = lr_scheduler.OneCycleLR(optimizer, max_lr=0.008, total_steps=eps * len(self.train_dataloader))
-        # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.1)
+        optimizer = Adam(self.model.parameters(), lr=lr)#, weight_decay=0.01)
+        # scheduler = lr_scheduler.OneCycleLR(optimizer, max_lr=0.008, total_steps=eps * len(self.train_dataloader))
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=0.0000001)
         # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
         
         patience = 0
@@ -70,7 +70,7 @@ class WeatherClass:
                 
                 loss.backward()
                 optimizer.step()
-                scheduler.step()
+                # scheduler.step()
 
                 del X,y,loss,pred
                 torch.cuda.empty_cache()
@@ -78,8 +78,6 @@ class WeatherClass:
             
             scheduler.step()
 
-            
-            # scheduler.step()
             val_loss = 0
             val_acc = 0
             self.model.eval()

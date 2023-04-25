@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from feature import get_all_features
+from feature import get_all_features, hog
 
 
 class ViT(nn.Module):
@@ -47,21 +47,35 @@ class ViT(nn.Module):
         return output
 
 
-def get_resnet50(eng_feats=None, freeze_backbone=None, params=None, n_classes=4):
-    model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-    model.fc = nn.Linear(2048, n_classes) 
 
-    if params:
-        model.load_state_dict(torch.load(params))
+class FeaturesOnly(nn.Module):
+    def __init__(self, eng_feats=True, freeze_backbone=False, params=None, n_classes=4):
+        super(FeaturesOnly, self).__init__()
 
-    if freeze_backbone:
-        print('freeze')
-        for param in model.parameters():
-            param.requires_grad = False
-        for param in model.fc.parameters():
-            param.requires_grad = True
+        self.backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        self.classification_head = nn.Sequential(
+            nn.Linear(1200, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, n_classes),
+        )
 
-    return model
+
+    def forward(self, x):
+        all_feats, hist_feats = get_all_features(x, hist=False)
+        feats = self.backbone(all_feats)
+        feats = torch.cat((feats, hist_feats), dim=1)
+        out = self.classification_head(feats)
+        return out
 
 
 

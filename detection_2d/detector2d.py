@@ -23,19 +23,20 @@ class Detector:
         cfg_path = 'COCO-Detection/retinanet_R_50_FPN_3x.yaml'
         checkpoint_url = 'COCO-Detection/retinanet_R_50_FPN_3x.yaml'
 
-        root_dir = '/home/lulu/datasets/KITTI-coco'
+        # root_dir = '/home/lulu/datasets/KITTI-coco'
+        root_dir = '/home/lulu/datasets/Dawn/Fog_coco_restore'
         self.train_name = 'kitti-train'
         self.test_name = 'kitti-val'
         register_coco_instances(
             self.train_name, 
             metadata={}, 
-            json_file=os.path.join(root_dir, 'train.json'),
+            json_file=os.path.join(root_dir, 'labels.json'),
             image_root=os.path.join(root_dir, 'data')
         )
         register_coco_instances(
             self.test_name,
             metadata={},
-            json_file=os.path.join(root_dir, 'valid.json'),
+            json_file=os.path.join(root_dir, 'labels.json'),
             image_root=os.path.join(root_dir, 'data')
         )
 
@@ -54,13 +55,16 @@ class Detector:
         self.trainer.train()
 
 
-    def evaluate(self):
-
-        with open(self.cfg_path, 'rb') as f:
+    def evaluate(self, test_cfg_path=None):
+        
+        if not test_cfg_path:
+            test_cfg_path = self.cfg_path
+        with open(test_cfg_path, 'rb') as f:
             test_cfg = pickle.load(f)
             
         test_cfg.MODEL.WEIGHTS = os.path.join(test_cfg.OUTPUT_DIR, 'model_final.pth')
         test_cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+        test_cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
         predictor = DefaultPredictor(test_cfg)
 
         evaluator = COCOEvaluator(self.test_name, ('bbox',), False, output_dir=self.output_dir)
@@ -78,7 +82,7 @@ parser.add_argument('--exp_name', type=str, required=True)
 parser.add_argument('--eval_only', action='store_true')
 if __name__ == "__main__":
     args = parser.parse_args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0,1,2,3'
 
     kitti_detector = Detector(args.exp_name)
 

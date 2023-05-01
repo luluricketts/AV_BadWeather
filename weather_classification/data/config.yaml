@@ -14,7 +14,7 @@ datasets:
   DENSE: add_DENSE
   Dawn: add_Dawn
   MWI: add_MWI
-device_IDs: 2,3
+device_IDs: 0,1,2,3
 early_stop_epoch: 5
 eng_feats: true
 epochs: 20

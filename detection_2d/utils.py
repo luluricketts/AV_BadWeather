@@ -13,7 +13,7 @@ def onImage(dataset_name, output_dir, predictor=None, n=1):
     dataset_custom = DatasetCatalog.get(dataset_name)
     metadata_custom = MetadataCatalog.get(dataset_name)
 
-    for i,s in enumerate(random.sample(dataset_custom, n)):
+    for i,s in enumerate(dataset_custom):
         img = cv2.imread(s['file_name'])
         
         if predictor:
@@ -53,9 +53,9 @@ def get_train_cfg(cfg_file_path, checkpoint_url, train_name, test_name, output_d
     cfg.DATASETS.TEST = (test_name,)
     cfg.TEST.EVAL_PERIOD = 100
 
-    cfg.SOLVER.IMS_PER_BATCH = 16
+    cfg.SOLVER.IMS_PER_BATCH = 8
     cfg.SOLVER.BASE_LR = 0.00005
-    cfg.SOLVER.MAX_ITER = 5000
+    cfg.SOLVER.MAX_ITER = 2000
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 7
     cfg.MODEL.RETINANET.NUM_CLASSES = 7

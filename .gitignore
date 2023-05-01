@@ -1,6 +1,5 @@
 **/__pycache__
 .DS**
-detection_2d
 example_imgs
 weather_classification/results
 weather_classification/video**

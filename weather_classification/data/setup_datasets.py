@@ -2,6 +2,7 @@ import os
 import json
 import yaml
 import numpy as np
+from yaml import safe_load as yload
 
 def reset_cfg(cfg):
     cfg["UID_train"] = 0
@@ -24,7 +25,7 @@ def load_json(cfg):
         open(train_path, "w+")
         open(val_path, "w+")
         open(test_path, "w+")
-        cfg = reset_cfg(cfg)
+    cfg = reset_cfg(cfg)
     with open(train_path) as file: 
         try:
             train_json = json.load(file)
@@ -63,6 +64,8 @@ def add_MWI(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "MWI",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_train"] += 1
             cfg_file["class_counts"][i] += 1
@@ -71,6 +74,8 @@ def add_MWI(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "MWI",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_val"] += 1
             cfg_file["val_class_counts"][i] += 1
@@ -79,6 +84,8 @@ def add_MWI(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "MWI",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_test"] += 1
             cfg_file["test_class_counts"][i] += 1
@@ -96,7 +103,7 @@ def add_MWI(cfg_file):
 def add_Dawn(cfg_file):
     train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
-    dawn_base = os.path.join(cfg_file["dataset_path"], "Dawn")
+    dawn_base = os.path.join(cfg_file["dataset_path"], "DAWN")
     dawn_fog = os.path.join(dawn_base, "Fog")
     dawn_rain = os.path.join(dawn_base, "Rain")
     dawn_snow = os.path.join(dawn_base, "Snow")
@@ -113,6 +120,8 @@ def add_Dawn(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "Dawn",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_train"] += 1
             cfg_file["class_counts"][i] += 1
@@ -123,6 +132,8 @@ def add_Dawn(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "Dawn",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_val"] += 1
             cfg_file["val_class_counts"][i] += 1
@@ -133,6 +144,8 @@ def add_Dawn(cfg_file):
                 "img_path" : os.path.join(cls_dir, file),
                 "source" : "Dawn",
                 "label" : i,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_test"] += 1
             cfg_file["test_class_counts"][i] += 1
@@ -165,7 +178,9 @@ def add_bdd100k(cfg_file):
         train_json[cfg_file["UID_train"]] = {
             "img_path" : os.path.join(bdd_train_img, item["name"]),
             "source" : "BDD100k",
-            "label" : label
+            "label" : label,
+            "fog_density" : -1,
+            "beta" : -1,
         }
         cfg_file["UID_train"] += 1
         cfg_file["class_counts"][label] += 1
@@ -179,7 +194,9 @@ def add_bdd100k(cfg_file):
             val_json[cfg_file["UID_val"]] = {
                 "img_path" : os.path.join(bdd_val_img, item["name"]),
                 "source" : "BDD100k",
-                "label" : label
+                "label" : label,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_val"] += 1
             cfg_file["val_class_counts"][label] += 1
@@ -187,7 +204,9 @@ def add_bdd100k(cfg_file):
             test_json[cfg_file["UID_test"]] = {
                 "img_path" : os.path.join(bdd_val_img, item["name"]),
                 "source" : "BDD100k",
-                "label" : label
+                "label" : label,
+                "fog_density" : -1,
+                "beta" : -1,
             }
             cfg_file["UID_test"] += 1
             cfg_file["test_class_counts"][label] += 1
@@ -201,13 +220,150 @@ def add_bdd100k(cfg_file):
 
     return cfg_file
     
+def add_kitti_fog(cfg_file):
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
+    kitti_base = os.path.join(cfg_file["dataset_path"], "KITTI_foggy")
+    
+    filepath = "/home/roshini/AV_BadWeather/TransWeather/data_raw/KITTI_foggy/data.txt"
+    lines = []
+    with open(filepath, 'r') as file:
+        for line in file:
+            words = line.split(' ')
+            lines.append(words)
+        
+    for i,cls_dir in enumerate([kitti_base], start=1):
 
+        shuffled = np.random.permutation(os.listdir(cls_dir))
+        train_idx = int(len(shuffled) * cfg_file["train_ratio"])
+        val_idx = int((len(shuffled) - train_idx) // 2) + train_idx
+        for file in shuffled[:train_idx]:
+            if '.png' not in file:
+                continue
+            for m in range(len(lines)):
+                if file[:-4]==lines[m][0]:
+                    beta = float(lines[m][-1])
+                    fg=0
+                    if beta<=1.5:
+                        fg=1
+                    elif beta>1.5 and beta<=3:
+                        fg = 2
+                    elif beta>3:
+                        fg = 3
+                      
+            train_json[cfg_file["UID_train"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "KITTI_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta" : beta,
+            }
+            cfg_file["UID_train"] += 1
+            cfg_file["class_counts"][3] += 1
+        for file in shuffled[train_idx:val_idx]:
+            if '.png' not in file:
+                continue
+            val_json[cfg_file["UID_val"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "KITTI_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta": beta,
+            }
+            cfg_file["UID_val"] += 1
+            cfg_file["val_class_counts"][i] += 1
+        for file in shuffled[val_idx:]:
+            if '.png' not in file:
+                continue
+            test_json[cfg_file["UID_test"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "KITTI_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta" : beta,
+            }
+            cfg_file["UID_test"] += 1
+            cfg_file["test_class_counts"][i] += 1
+
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file
+
+def add_bdd_fog(cfg_file):
+    train_json, val_json, test_json, cfg_file = load_json(cfg_file)
+    bdd_base = os.path.join(cfg_file["dataset_path"], "bdd100k_foggy/train")
+    filepath = "/home/roshini/AV_BadWeather/TransWeather/data_raw/bdd100k_foggy/data_train.txt"
+    with open(filepath, 'r') as file:
+        line = json.load(file)
+    for i,cls_dir in enumerate([bdd_base], start=1):
+        shuffled = np.random.permutation(os.listdir(cls_dir))
+        train_idx = int(len(shuffled) * cfg_file["train_ratio"])
+        val_idx = int((len(shuffled) - train_idx) // 2) + train_idx
+        for file in shuffled[:train_idx]:
+            if '.jpg' not in file:
+                continue
+            for m in range(len(line)):
+                if line[m]["filename"]==file[:-4]:
+                    beta = float(line[m]["Beta"])
+                    fg = 0
+                    if beta<=1.5:
+                        fg=1
+                    elif beta>1.5 and beta<=3:
+                        fg=2
+                    elif beta>3:
+                        fg=3
+            train_json[cfg_file["UID_train"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "bdd100k_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta" : beta,                                                                                      }
+            cfg_file["UID_train"] += 1
+            cfg_file["class_counts"][3] += 1
+        for file in shuffled[train_idx:val_idx]:
+            if '.jpg' not in file:
+                continue
+            val_json[cfg_file["UID_val"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "bdd100k_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta": beta,
+            }
+            cfg_file["UID_val"] += 1
+            cfg_file["val_class_counts"][i] += 1
+
+        for file in shuffled[val_idx:]:
+            if '.jpg' not in file:
+                continue
+            test_json[cfg_file["UID_test"]] = {
+                "img_path" : os.path.join(cls_dir, file),
+                "source" : "bdd100k_fog",
+                "label" : 3,
+                "fog_density" : fg,
+                "beta" : beta,
+            }
+            cfg_file["UID_test"] += 1
+            cfg_file["test_class_counts"][i] += 1
+    with open(cfg_file["metadata_train"], "w") as file:
+        json.dump(train_json, file)
+    with open(cfg_file["metadata_val"], "w") as file:
+        json.dump(val_json, file)
+    with open(cfg_file["metadata_test"], "w") as file:
+        json.dump(test_json, file)
+
+    return cfg_file
+            
 def add_DENSE(cfg_file):
 
     train_json, val_json, test_json, cfg_file = load_json(cfg_file)
 
-    dense_base = '/media/kolossus_data3/bad_weather_data/DENSE'
+    dense_base = cfg_file["dataset_path"]
     dense_imgs = os.path.join(dense_base, 'cam_stereo_left_lut')
     dense_labels = os.path.join(dense_base, 'labeltool_labels')
 
@@ -244,6 +400,8 @@ def add_DENSE(cfg_file):
             "img_path" : os.path.join(dense_imgs, file),
             "source" : "DENSE",
             "label" : label,
+            "fog_density" : -1,
+            "beta" : -1,
         }
         cfg_file["UID_train"] += 1
         cfg_file["class_counts"][label] += 1
@@ -261,6 +419,8 @@ def add_DENSE(cfg_file):
             "img_path" : os.path.join(dense_imgs, file),
             "source" : "DENSE",
             "label" : label,
+            "fog_density" : -1,
+            "beta" : -1,
         }
         cfg_file["UID_val"] += 1
         cfg_file["val_class_counts"][label] += 1
@@ -278,6 +438,8 @@ def add_DENSE(cfg_file):
             "img_path" : os.path.join(dense_imgs, file),
             "source" : "DENSE",
             "label" : label,
+            "fog_density" : -1,
+            "beta" : -1,
         }
         cfg_file["UID_test"] += 1
         cfg_file["test_class_counts"][label] += 1
@@ -290,3 +452,5 @@ def add_DENSE(cfg_file):
         json.dump(test_json, file)
 
     return cfg_file
+
+

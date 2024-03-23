@@ -68,16 +68,29 @@ class FeaturesOnly(nn.Module):
             nn.ReLU(),
             nn.Linear(64, n_classes),
         )
-
+        self.classification_fog_head = nn.Sequential(
+            nn.Linear(1200, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, 4),
+        )
 
     def forward(self, x):
         all_feats, hist_feats = get_all_features(x, hist=False)
         feats = self.backbone(all_feats)
         feats = torch.cat((feats, hist_feats), dim=1)
-        out = self.classification_head(feats)
-        return out
-
-
+        out1 = self.classification_head(feats)
+        out2 = self.classification_fog_head(feats)
+        return out1, out2
 
 class ResNet(nn.Module):
     def __init__(self, eng_feats:bool, freeze_backbone:bool, params=None, n_classes=4, feature_len=45):
@@ -99,7 +112,15 @@ class ResNet(nn.Module):
             # nn.Tanh(),
             nn.Linear(32, n_classes)
         )
-
+        self.fog_classification_head = nn.Sequential(
+                nn.Linear(1000 + feature_len, 512),
+                nn.ReLU(),
+                nn.Linear(512, 128),
+                nn.ReLU(),
+                nn.Linear(128, 32),
+                nn.ReLU(),
+                nn.Linear(32, 4)
+        )
         # can change number of resnet features frozen
         if freeze_backbone:
             # for param in self.resnet.layer1.parameters():
@@ -129,8 +150,10 @@ class ResNet(nn.Module):
             features = get_all_features(x)
             all_features = torch.cat((all_features, features), dim=1)
         x = self.classification_head(all_features)
-        output = torch.sigmoid(x)
-        return output
+        y = self.fog_classification_head(all_features)
+        output1 = torch.sigmoid(x)
+        output2 = torch.sigmoid(y)
+        return output1, output2
     
     def load_nonmatched_weights(self, weights):
 

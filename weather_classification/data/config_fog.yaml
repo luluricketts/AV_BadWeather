@@ -1,0 +1,47 @@
+UID_test: 7000
+UID_train: 56000
+UID_val: 7000
+batch_size: 16
+class_counts:
+  0: 0
+  1: 0
+  2: 0
+  3: 56000
+data_aug: false
+dataset_path: /home/roshini/AV_BadWeather/TransWeather/data_raw
+datasets:
+  BDD: add_bdd100k
+  DENSE: add_DENSE
+  Dawn: add_Dawn
+  KITTI_fog: add_kitti_fog
+  MWI: add_MWI
+  bdd100k_fog: add_bdd_fog
+device_IDs: 0,1,2,3
+early_stop_epoch: 2
+eng_feats: true
+epochs: 15
+freeze_backbone: false
+labels:
+  0: clear
+  1: rainy
+  2: snowy
+  3: foggy
+logging: 2
+lr: 0.0001
+metadata_test: /home/roshini/AV_BadWeather/TransWeather/data_raw/test.json
+metadata_train: /home/roshini/AV_BadWeather/TransWeather/data_raw/train.json
+metadata_val: /home/roshini/AV_BadWeather/TransWeather/data_raw/val.json
+model: FeaturesOnly
+notes: null
+params: null
+test_class_counts:
+  0: 0
+  1: 7000
+  2: 0
+  3: 0
+train_ratio: 0.8
+val_class_counts:
+  0: 0
+  1: 7000
+  2: 0
+  3: 0

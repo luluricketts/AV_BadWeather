@@ -4,9 +4,9 @@ import numpy as np
 from yaml import safe_load as yload
 from PIL import Image
 import torch
-from torch.utils.data import Dataset, WeightedRandomSampler, default_collate
+from torch.utils.data import Dataset, WeightedRandomSampler
 from torchvision import transforms
-
+from torch.utils.data.dataloader import default_collate
 
 transform = transforms.Compose([
     # transforms.RandomAffine(90),
@@ -63,9 +63,10 @@ class WeatherDataset(Dataset):
         idx = str(idx)
         img_path = self.metadata[idx]["img_path"]
         img = Image.open(img_path)
-        img = img.resize(self.img_size, Image.ANTIALIAS)
+        img = img.resize(self.img_size, Image.Resampling.LANCZOS)
 
         label = torch.tensor(self.metadata[idx]["label"])
+        fd = torch.tensor(self.metadata[idx]["fog_density"])
         
         if self.transform:
             try:
@@ -73,7 +74,7 @@ class WeatherDataset(Dataset):
             except:
                 img = transforms.ToTensor()(img) # will get collated out
 
-        return img, label, self.metadata[idx]["source"]
+        return img, label, fd, self.metadata[idx]["source"]
 
 
 class WeatherDatasetToResults(Dataset):
@@ -96,11 +97,11 @@ class WeatherDatasetToResults(Dataset):
         img = img.resize(self.img_size, Image.ANTIALIAS)
 
         label = torch.tensor(self.metadata[idx]["label"])
-        
+        fd = torch.tensor(self.metadata[idx]["fog_density"])
         if self.transform:
             try:
                 img = self.transform(img)
             except:
                 img = transforms.ToTensor()(img) # will get collated out
 
-        return img, label, self.metadata[idx]['img_path'], self.metadata[idx]['source']
+        return img, label, fd, self.metadata[idx]['img_path'], self.metadata[idx]['source']
